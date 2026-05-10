@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of PHP Mess Detector.
  *
@@ -17,6 +18,7 @@
 
 namespace PHPMD\Renderer;
 
+use JsonException;
 use PHPMD\AbstractRenderer;
 use PHPMD\PHPMD;
 use PHPMD\Report;
@@ -29,7 +31,7 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
     /**
      * {@inheritDoc}
      */
-    public function renderReport(Report $report)
+    public function renderReport(Report $report): void
     {
         $data = $this->initReportData($report);
         $data = $this->addViolationsToReport($report, $data);
@@ -42,41 +44,37 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
     /**
      * Create report data and add renderer meta properties
      *
-     * @param Report $report The report with potential violations.
-     * @return array
+     * @return array<string, string>
      */
-    protected function initReportData(Report $report)
+    protected function initReportData(Report $report): array
     {
-        $data = array(
+        return [
             'title' => sprintf('%s %s', 'phpmd', PHPMD::VERSION),
             'summary' => $this->getReportSummary($report),
-        );
-
-        return $data;
+        ];
     }
 
     /**
      * Add violations, if any, to the report data
      *
      * @param Report $report The report with potential violations.
-     * @param array $data The report output to add the violations to.
-     * @return array The report output with violations, if any.
+     * @param array<string, mixed> $data The report output to add the violations to.
+     * @return array<string, mixed> The report output with violations, if any.
      */
-    protected function addViolationsToReport(Report $report, array $data)
+    protected function addViolationsToReport(Report $report, array $data): array
     {
-        $filesList = array();
-        /** @var RuleViolation $violation */
+        $filesList = [];
         foreach ($report->getRuleViolations() as $violation) {
             $fileName = $violation->getFileName();
             $rule = $violation->getRule();
-            $filesList[$fileName]['path'] = $fileName;
-            $filesList[$fileName]['violations'][] = array(
+            $filesList[$fileName ?? '']['path'] = $fileName;
+            $filesList[$fileName ?? '']['violations'][] = [
                 'start_line' => $violation->getBeginLine(),
                 'end_line' => $violation->getEndLine(),
                 'annotation_level' => $this->getAnnotationLevelFromPriority($rule->getPriority()),
                 'message' => $violation->getDescription(),
                 'title' => $rule->getName(),
-                'raw_details' => array(
+                'raw_details' => [
                     'package' => $violation->getNamespaceName(),
                     'function' => $violation->getFunctionName(),
                     'class' => $violation->getClassName(),
@@ -85,8 +83,8 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
                     'ruleSet' => $rule->getRuleSetName(),
                     'externalInfoUrl' => $rule->getExternalInfoUrl(),
                     'priority' => $rule->getPriority(),
-                ),
-            );
+                ],
+            ];
         }
         $data['annotations'] = array_values($filesList);
 
@@ -95,13 +93,13 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
 
     private function getAnnotationLevelFromPriority(int $priority): string
     {
-        $levels = array(
+        $levels = [
             1 => 'failure',
             2 => 'warning',
             3 => 'warning',
             4 => 'notice',
             5 => 'notice',
-        );
+        ];
 
         return $levels[$priority];
     }
@@ -109,22 +107,17 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
     /**
      * Encode report data to the JSON representation string
      *
-     * @param array $data The report data
-     *
-     * @return string
+     * @param array<mixed> $data The report data
+     * @throws JsonException
      */
-    private function encodeReport($data)
+    private function encodeReport(array $data): string
     {
-        $encodeOptions = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP |
-            (defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0);
+        $encodeOptions = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+            | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR;
 
         return json_encode($data, $encodeOptions);
     }
 
-    /**
-     * @param \PHPMD\Report $report
-     * @return string
-     */
     private function getReportSummary(Report $report): string
     {
         if (count($report->getRuleViolations()) === 0 && iterator_count($report->getErrors()) === 0) {
