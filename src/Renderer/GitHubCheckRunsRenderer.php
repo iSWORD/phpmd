@@ -26,11 +26,8 @@ use PHPMD\Report;
 /**
  * This class will render a report for GitHub Check Runs.
  */
-class GitHubCheckRunsRenderer extends AbstractRenderer
+final class GitHubCheckRunsRenderer extends AbstractRenderer
 {
-    /**
-     * {@inheritDoc}
-     */
     public function renderReport(Report $report): void
     {
         $data = $this->initReportData($report);
@@ -46,7 +43,7 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
      *
      * @return array<string, string>
      */
-    protected function initReportData(Report $report): array
+    private function initReportData(Report $report): array
     {
         return [
             'title' => sprintf('%s %s', 'phpmd', PHPMD::VERSION),
@@ -61,7 +58,7 @@ class GitHubCheckRunsRenderer extends AbstractRenderer
      * @param array<string, mixed> $data The report output to add the violations to.
      * @return array<string, mixed> The report output with violations, if any.
      */
-    protected function addViolationsToReport(Report $report, array $data): array
+    private function addViolationsToReport(Report $report, array $data): array
     {
         $filesList = [];
         foreach ($report->getRuleViolations() as $violation) {
